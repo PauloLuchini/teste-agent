@@ -1,0 +1,20 @@
+{
+  "name": "tester-a2a-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servidor A2A (Agent2Agent) que expõe o subagente 'tester' como um agente externo chamável via HTTP/JSON-RPC.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "dev": "node --env-file=.env --watch src/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "express": "^4.21.2",
+    "glob": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
