@@ -1,0 +1,4 @@
+.git
+a2a-server/node_modules
+a2a-server/.env
+a2a-server/*.log

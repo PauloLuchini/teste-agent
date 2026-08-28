@@ -16,10 +16,11 @@ Depois de rodar o servidor (veja abaixo), este agente é identificado por:
      este servidor (ex.: atrás de um domínio HTTPS).
 
 2. **Versão do protocolo suportada**
-   - `protocolVersion: "0.2.5"` (ver `src/agentCard.js`), reportada dentro do
-     Agent Card. Confirme contra a especificação vigente antes de integrar em
-     produção, pois o A2A ainda evolui:
-     https://a2a-protocol.org/latest/specification/
+   - `protocolVersion: "0.3.0"` (ver `src/agentCard.js`), reportada dentro do
+     Agent Card. É a versão exigida pelo watsonx Orchestrate no momento
+     (versões antigas como 0.2.1 estão deprecadas lá). Confirme contra a
+     especificação vigente antes de integrar em produção, pois o A2A ainda
+     evolui: https://a2a-protocol.org/latest/specification/
 
 3. **Credenciais de autenticação**
    - Esquema: HTTP Bearer token (`securitySchemes.bearerAuth` no Agent Card).
@@ -43,6 +44,40 @@ npm start
 ```
 
 O servidor sobe em `http://localhost:41241` (ou na porta que você definir).
+
+## Rodando em container (Podman ou Docker)
+
+O `Dockerfile` fica em `a2a-server/`, mas o **contexto de build é a raiz do
+repositório** — a imagem também precisa do system prompt em
+`.claude/agents/tester.md`. Rode os comandos a partir da raiz do repo:
+
+```bash
+# build (troque podman por docker se preferir)
+podman build -f a2a-server/Dockerfile -t tester-a2a .
+
+# run — monte o projeto-ALVO (onde o agente vai ler/escrever/rodar testes)
+# em /workspace; aqui usamos o próprio repo como exemplo
+podman run --rm -p 41241:41241 \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -e A2A_BEARER_TOKENS=$(openssl rand -hex 32) \
+  -e AGENT_BASE_URL=http://localhost:41241 \
+  -v "$(pwd)":/workspace:Z \
+  tester-a2a
+```
+
+Notas:
+- `:Z` no `-v` é a flag do Podman para relabeling SELinux (comum em
+  Fedora/RHEL); no Docker ou em distros sem SELinux, pode omitir.
+- `WORKSPACE_DIR` já vem fixado em `/workspace` na imagem — é onde
+  `Read`/`Write`/`Edit`/`Glob`/`Grep`/`Bash` vão operar. Monte ali o
+  repositório em que você quer que o `tester` escreva/rode testes.
+- **Isso ainda é local.** Um container rodando na sua máquina não tem uma
+  URL alcançável pela internet — para o watsonx Orchestrate (que roda na
+  nuvem) conseguir chamar este agente, ele precisa de um `api_url` público
+  (deploy em Code Engine, um túnel tipo `ngrok`/Cloudflare Tunnel apontando
+  para este container, etc.). Rodar local com Podman é ótimo para
+  desenvolver/testar o agente antes disso, mas não substitui a hospedagem
+  pública quando for de fato importar no Orchestrate.
 
 ## Testando
 
