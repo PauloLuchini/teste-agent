@@ -1,0 +1,34 @@
+# Spec de "external agent" para importar o servidor A2A do tester no
+# watsonx Orchestrate via ADK:
+#   orchestrate agents import -f watsonx-orchestrate/tester_a2a_agent.yaml
+#
+# Pré-requisitos:
+# - O servidor em ../src/server.js precisa estar rodando em uma URL PÚBLICA
+#   e alcançável (HTTPS) pelo watsonx Orchestrate — localhost não funciona
+#   a menos que o Orchestrate rode na mesma máquina/rede.
+# - protocolVersion do Agent Card deve ser 0.3.0 (já ajustado em
+#   src/agentCard.js) — versões como 0.2.1 estão deprecadas no Orchestrate.
+spec_version: v1
+kind: external
+name: tester
+title: Tester
+nickname: tester
+description: >
+  Agente especializado em testes de software: escreve, roda e corrige
+  testes automatizados, investigando falhas e reportando cobertura.
+tags:
+  - testing
+  - qa
+  - automation
+
+# Declara que este é um agente A2A na versão 0.3.0 do protocolo.
+provider: external_chat/A2A/0.3.0
+
+# URL do endpoint JSON-RPC do servidor (não a do Agent Card).
+# Troque pelo host público onde você hospedar a a2a-server/.
+api_url: https://SEU-DOMINIO-PUBLICO/a2a
+
+# Mesmo esquema declarado em securitySchemes do Agent Card.
+auth_scheme: BEARER_TOKEN
+auth_config:
+  token: "SEU_A2A_BEARER_TOKEN_AQUI"

@@ -101,6 +101,59 @@ raciocinar e decidir quais ferramentas chamar.
   sandboxa o comando em si — não exponha este servidor a chamadores que você
   não confia.
 
+## Importando no IBM watsonx Orchestrate
+
+O watsonx Orchestrate consegue registrar este agente como um "external
+agent" A2A, mas **só via ADK (linha de comando)** — o assistente de import
+da UI não cobre agentes A2A.
+
+1. **Hospede o servidor publicamente.** watsonx Orchestrate precisa alcançar
+   `api_url` por HTTPS — `localhost` só funciona se o Orchestrate rodar na
+   mesma máquina/rede (ex.: Developer Edition local). Para produção, suba
+   este servidor em algo como IBM Code Engine, Cloud Run, um container
+   atrás de um domínio com TLS, etc.
+
+2. **Instale o ADK e conecte ao seu ambiente:**
+
+   ```bash
+   pip install --upgrade ibm-watsonx-orchestrate
+   orchestrate env add -n meu-ambiente -u <URL_DA_SUA_INSTANCIA_ORCHESTRATE>
+   orchestrate env activate meu-ambiente
+   ```
+
+3. **Edite `watsonx-orchestrate/tester_a2a_agent.yaml`** com a URL pública
+   do seu `/a2a` e o token Bearer (o mesmo de `A2A_BEARER_TOKENS`).
+
+4. **Importe o agente:**
+
+   ```bash
+   orchestrate agents import -f watsonx-orchestrate/tester_a2a_agent.yaml
+   ```
+
+5. Confirme com `orchestrate agents list` e adicione o `tester` a um
+   assistant/time pela UI do Orchestrate.
+
+Pontos importantes confirmados na documentação oficial:
+- O campo `provider` precisa ser exatamente `external_chat/A2A/0.3.0` — o
+  Orchestrate versiona o protocolo A2A nesse campo, e versões antigas (ex.:
+  0.2.1) estão deprecadas. Por isso `A2A_PROTOCOL_VERSION` em
+  `src/agentCard.js` está fixada em `0.3.0`.
+- `auth_scheme` aceita `BEARER_TOKEN`, `API_KEY` ou `NONE` — usamos
+  `BEARER_TOKEN`, compatível com o `securitySchemes.bearerAuth` do nosso
+  Agent Card.
+
+Referências:
+- [Orchestrating external agents using A2A standard on watsonx Orchestrate (IBM Developer)](https://developer.ibm.com/tutorials/orchestrate-agents-a2a-standard/)
+- [Integrating Agents in watsonx Orchestrate via A2A — Niklas Heidloff](https://heidloff.net/article/a2a-watsonx-orchestrate/)
+- [connect agent — watsonx Orchestrate developer docs](https://developer.watson-orchestrate.ibm.com/_releases/1.15.0/agents/connect_agent)
+- [IBM/ibm-watsonx-orchestrate-adk (GitHub)](https://github.com/IBM/ibm-watsonx-orchestrate-adk)
+
+Não consegui abrir essas páginas diretamente neste ambiente (proxy de rede
+bloqueou o fetch), então os nomes exatos dos comandos `orchestrate env
+add/activate` e possíveis flags adicionais vieram de buscas/resumos, não de
+leitura completa da doc — confira a página oficial antes de rodar em
+produção, os detalhes finos podem variar por versão do ADK.
+
 ## Streaming e notificações push
 
 Este servidor implementa o transporte JSON-RPC síncrono (`message/send`,

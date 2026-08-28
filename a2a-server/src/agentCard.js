@@ -1,9 +1,11 @@
 import { config } from "./config.js";
 
 // Versão do protocolo A2A (Agent2Agent) que este servidor implementa.
-// Confirme sempre contra a especificação vigente antes de integrar em produção:
+// 0.3.0 é a versão exigida pelo watsonx Orchestrate no momento (provider
+// "external_chat/A2A/0.3.0") — versões anteriores como 0.2.1 estão
+// deprecadas lá. Confirme sempre contra a especificação vigente:
 // https://a2a-protocol.org/latest/specification/
-export const A2A_PROTOCOL_VERSION = "0.2.5";
+export const A2A_PROTOCOL_VERSION = "0.3.0";
 
 /**
  * Agent Card exposto em /.well-known/agent-card.json, conforme a spec A2A.
