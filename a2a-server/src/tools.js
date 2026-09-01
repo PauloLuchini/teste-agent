@@ -123,7 +123,13 @@ export async function runTool(name, input) {
       return `Arquivo editado: ${input.file_path}`;
     }
     case "Glob": {
-      const matches = await glob(input.pattern, { cwd: config.workspaceDir, nodir: true });
+      const matches = await glob(input.pattern, {
+        cwd: config.workspaceDir,
+        nodir: true,
+        // node_modules e .git normalmente não interessam a uma busca de
+        // código e só poluem o resultado (e o custo, na API paga).
+        ignore: ["**/node_modules/**", "**/.git/**"],
+      });
       return matches.join("\n") || "(nenhum arquivo encontrado)";
     }
     case "Grep": {
@@ -131,7 +137,7 @@ export async function runTool(name, input) {
       try {
         const { stdout } = await execFileAsync(
           "grep",
-          ["-rn", "-E", input.pattern, target],
+          ["-rn", "-E", "--exclude-dir=node_modules", "--exclude-dir=.git", input.pattern, target],
           { maxBuffer: 1024 * 1024 * 10 }
         );
         return stdout || "(sem ocorrências)";
