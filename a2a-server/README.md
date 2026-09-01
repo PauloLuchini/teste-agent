@@ -45,6 +45,49 @@ npm start
 
 O servidor sobe em `http://localhost:41241` (ou na porta que você definir).
 
+## Rodando com um modelo local (sem cobrança por token)
+
+Por padrão o servidor usa a API da Anthropic (`MODEL_PROVIDER=anthropic`),
+cobrada por token. Se você quer rodar o raciocínio do agente localmente,
+sem depender de uma API paga, use o [Ollama](https://ollama.com/):
+
+```bash
+# instale o Ollama (https://ollama.com/download) e baixe um modelo
+# com suporte a tool calling — obrigatório, o agente depende disso
+# para chamar Read/Write/Edit/Glob/Grep/Bash:
+ollama pull llama3.1
+ollama serve   # se não estiver rodando como serviço já
+
+# no .env do a2a-server:
+# MODEL_PROVIDER=ollama
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_MODEL=llama3.1
+```
+
+`ANTHROPIC_API_KEY` deixa de ser necessário nesse modo. A troca de provider
+é feita em `src/providers/` (`anthropic.js` e `ollama.js`), que expõem o
+mesmo contrato `chat({ system, messages, tools })` para o `agentLoop.js` —
+trocar de provider não muda o resto do servidor (autenticação, Agent Card,
+endpoints A2A).
+
+**Ressalvas:**
+- **Isso muda onde a inferência roda, não onde o servidor precisa estar
+  acessível.** O watsonx Orchestrate (SaaS na nuvem) ainda precisa alcançar
+  o endpoint `/a2a` por HTTPS — rodar o modelo localmente não elimina a
+  necessidade de hospedar/expor publicamente o servidor (veja a seção
+  seguinte), **a menos que** você também rode o watsonx Orchestrate
+  localmente (Developer Edition), caso em que `localhost` basta.
+- **Qualidade de tool calling varia bastante entre modelos locais.** A API
+  de function calling do Ollama é menos madura que a da Anthropic (por
+  exemplo, não devolve um `id` por chamada de ferramenta — o servidor gera
+  um internamente só para rastrear o turno). Modelos pequenos podem
+  alucinar chamadas de ferramenta com mais frequência ou ignorar o
+  `input_schema`; teste bem antes de confiar em produção.
+- Rodando em container (seção abaixo), o Ollama do host não é alcançável
+  em `localhost` de dentro do container — aponte `OLLAMA_BASE_URL` para
+  `http://host.docker.internal:11434` (Docker Desktop) ou publique o
+  Ollama na rede do container.
+
 ## Rodando em container (Podman ou Docker)
 
 O `Dockerfile` fica em `a2a-server/`, mas o **contexto de build é a raiz do

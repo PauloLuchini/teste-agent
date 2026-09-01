@@ -1,8 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Anthropic from "@anthropic-ai/sdk";
-import { config } from "./config.js";
+import { getProvider } from "./providers/index.js";
 import { toolDefinitions, runTool } from "./tools.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,64 +21,50 @@ async function loadSystemPrompt() {
   return cachedSystemPrompt;
 }
 
-const client = new Anthropic({ apiKey: config.anthropicApiKey });
-
 const MAX_TURNS = 24;
 
 /**
  * Roda o agente "tester" até ele produzir uma resposta final de texto
  * (sem mais chamadas de ferramenta), executando as tool calls no meio
- * do caminho. Retorna o texto final e o histórico de mensagens.
+ * do caminho. O histórico é mantido em um formato canônico, independente
+ * de provider (Anthropic ou Ollama — ver src/providers/). Retorna o texto
+ * final e o histórico de mensagens.
  */
 export async function runTesterAgent(userMessage, { onEvent } = {}) {
   const system = await loadSystemPrompt();
+  const provider = getProvider();
   const messages = [{ role: "user", content: userMessage }];
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await client.messages.create({
-      model: config.model,
-      max_tokens: 4096,
-      system,
-      tools: toolDefinitions,
-      messages,
-    });
+    const result = await provider.chat({ system, messages, tools: toolDefinitions });
 
-    onEvent?.({ type: "model_turn", response });
+    onEvent?.({ type: "model_turn", raw: result.raw });
 
-    const toolUses = response.content.filter((b) => b.type === "tool_use");
+    messages.push({ role: "assistant", text: result.text, toolCalls: result.toolCalls });
 
-    if (toolUses.length === 0 || response.stop_reason !== "tool_use") {
-      const text = response.content
-        .filter((b) => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
-      return { text, messages: [...messages, { role: "assistant", content: response.content }] };
+    if (result.done) {
+      return { text: result.text, messages };
     }
 
-    messages.push({ role: "assistant", content: response.content });
-
-    const toolResults = [];
-    for (const toolUse of toolUses) {
-      onEvent?.({ type: "tool_call", tool: toolUse.name, input: toolUse.input });
-      let result;
+    for (const toolCall of result.toolCalls) {
+      onEvent?.({ type: "tool_call", tool: toolCall.name, input: toolCall.input });
+      let content;
       let isError = false;
       try {
-        result = await runTool(toolUse.name, toolUse.input);
+        content = await runTool(toolCall.name, toolCall.input);
       } catch (err) {
-        result = `Erro: ${err.message}`;
+        content = `Erro: ${err.message}`;
         isError = true;
       }
-      onEvent?.({ type: "tool_result", tool: toolUse.name, result, isError });
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: toolUse.id,
-        content: String(result).slice(0, 50_000),
-        is_error: isError,
+      onEvent?.({ type: "tool_result", tool: toolCall.name, result: content, isError });
+      messages.push({
+        role: "tool",
+        toolCallId: toolCall.id,
+        name: toolCall.name,
+        content: String(content).slice(0, 50_000),
+        isError,
       });
     }
-
-    messages.push({ role: "user", content: toolResults });
   }
 
   throw new Error("O agente excedeu o número máximo de turnos sem concluir.");

@@ -41,7 +41,13 @@ app.listen(config.port, () => {
   if (config.bearerTokens.length === 0) {
     console.warn("[a2a] AVISO: nenhum A2A_BEARER_TOKENS configurado — chamadas serão rejeitadas.");
   }
-  if (!config.anthropicApiKey) {
+  if (config.provider === "anthropic" && !config.anthropicApiKey) {
     console.warn("[a2a] AVISO: ANTHROPIC_API_KEY ausente — o agente falhará ao processar mensagens.");
+  } else if (config.provider === "ollama") {
+    console.log(`[a2a] provider: ollama — modelo local "${config.ollamaModel}" em ${config.ollamaBaseUrl}`);
+  } else if (config.provider === "anthropic") {
+    console.log(`[a2a] provider: anthropic — modelo "${config.model}"`);
+  } else {
+    console.warn(`[a2a] AVISO: MODEL_PROVIDER desconhecido: "${config.provider}" (use "anthropic" ou "ollama").`);
   }
 });
