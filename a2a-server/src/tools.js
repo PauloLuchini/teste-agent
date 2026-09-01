@@ -61,7 +61,11 @@ export const toolDefinitions = [
   },
   {
     name: "Glob",
-    description: "Busca arquivos por padrão glob dentro do workspace.",
+    description:
+      "Busca arquivos por padrão glob dentro do workspace, recursivamente em subdiretórios. " +
+      "Use ** para descer em qualquer profundidade — ex.: '**/*' lista todos os arquivos do " +
+      "workspace, '**/*.js' todos os .js em qualquer subpasta. Um padrão como '*' ou './*' só " +
+      "olha o nível raiz do workspace e não encontra nada se os arquivos estiverem em subpastas.",
     input_schema: {
       type: "object",
       properties: {

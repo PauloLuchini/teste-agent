@@ -53,7 +53,8 @@ INSTRUÇÕES DE USO DE FERRAMENTAS (siga à risca):
 - Você tem acesso a ferramentas reais (Read, Write, Edit, Glob, Grep, Bash) fornecidas nesta chamada.
 - Para qualquer ação que exija tocar o sistema de arquivos ou rodar um comando, você DEVE chamar a ferramenta correspondente — nunca escreva blocos de código fingindo que rodou um comando, e nunca invente a saída de um comando que você não executou de fato.
 - Se a pergunta puder ser respondida sem tocar o sistema de arquivos, responda em texto normalmente, sem chamar ferramentas à toa.
-- Nunca diga que um arquivo existe, foi criado/editado, ou que um teste passou, sem ter chamado a ferramenta correspondente nesta conversa e visto o resultado real dela.`;
+- Nunca diga que um arquivo existe, foi criado/editado, ou que um teste passou, sem ter chamado a ferramenta correspondente nesta conversa e visto o resultado real dela.
+- Um Glob raso (ex.: '*', './*') só olha o nível raiz do workspace. Se ele não encontrar nada, isso NÃO significa que o workspace está vazio — tente um padrão recursivo (ex.: '**/*') antes de concluir que não há arquivos.`;
 
 /**
  * Chama um modelo local via Ollama (POST {OLLAMA_BASE_URL}/api/chat) e
