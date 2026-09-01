@@ -80,8 +80,17 @@ export async function chat({ system, messages, tools }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      // Sem isso, uma trava no Ollama (modelo travado, sem VRAM/RAM, etc.)
+      // deixa a chamada pendurada para sempre sem nenhum erro aparecer.
+      signal: AbortSignal.timeout(config.ollamaTimeoutMs),
     });
   } catch (err) {
+    if (err.name === "TimeoutError") {
+      throw new Error(
+        `Ollama não respondeu em ${config.ollamaTimeoutMs / 1000}s (turno pendurado). ` +
+          "Rode `ollama ps` para ver se o modelo está travado, ou aumente OLLAMA_TIMEOUT_MS no .env."
+      );
+    }
     throw new Error(
       `Não foi possível conectar ao Ollama em ${config.ollamaBaseUrl} (${err.message}). ` +
         "Confirme que o Ollama está rodando (`ollama serve`) e que OLLAMA_BASE_URL está correto."

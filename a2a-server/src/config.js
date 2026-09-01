@@ -26,6 +26,9 @@ export const config = {
   // Usados apenas quando provider === "ollama".
   ollamaBaseUrl: (process.env.OLLAMA_BASE_URL ?? "http://localhost:11434").replace(/\/$/, ""),
   ollamaModel: process.env.OLLAMA_MODEL ?? "llama3.1",
+  // Timeout por turno de chamada ao Ollama. Modelos locais em CPU/Mac podem
+  // ser bem mais lentos que a API da Anthropic, então o padrão é generoso.
+  ollamaTimeoutMs: Number(process.env.OLLAMA_TIMEOUT_MS ?? 180_000),
 
   bearerTokens: (process.env.A2A_BEARER_TOKENS ?? "")
     .split(",")
