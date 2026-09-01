@@ -41,6 +41,20 @@ function toOllamaMessages(messages) {
   return out;
 }
 
+// Reforço de uso de ferramentas específico para modelos locais via Ollama.
+// O system prompt em .claude/agents/tester.md foi escrito para o harness do
+// Claude Code, onde o uso de tools é implícito e fortemente treinado no
+// modelo. Modelos locais (ex.: llama3.1) seguem essa convenção com bem
+// menos disciplina e tendem a "alucinar" blocos de código fingindo ter
+// rodado um comando em vez de de fato chamar a ferramenta — por isso esse
+// reforço só é aplicado aqui, não no prompt canônico usado pela Anthropic.
+const TOOL_USE_REINFORCEMENT = `
+INSTRUÇÕES DE USO DE FERRAMENTAS (siga à risca):
+- Você tem acesso a ferramentas reais (Read, Write, Edit, Glob, Grep, Bash) fornecidas nesta chamada.
+- Para qualquer ação que exija tocar o sistema de arquivos ou rodar um comando, você DEVE chamar a ferramenta correspondente — nunca escreva blocos de código fingindo que rodou um comando, e nunca invente a saída de um comando que você não executou de fato.
+- Se a pergunta puder ser respondida sem tocar o sistema de arquivos, responda em texto normalmente, sem chamar ferramentas à toa.
+- Nunca diga que um arquivo existe, foi criado/editado, ou que um teste passou, sem ter chamado a ferramenta correspondente nesta conversa e visto o resultado real dela.`;
+
 /**
  * Chama um modelo local via Ollama (POST {OLLAMA_BASE_URL}/api/chat) e
  * devolve o turno no mesmo formato canônico que o provider da Anthropic:
@@ -53,7 +67,10 @@ export async function chat({ system, messages, tools }) {
   const body = {
     model: config.ollamaModel,
     stream: false,
-    messages: [{ role: "system", content: system }, ...toOllamaMessages(messages)],
+    messages: [
+      { role: "system", content: system + "\n" + TOOL_USE_REINFORCEMENT },
+      ...toOllamaMessages(messages),
+    ],
     tools: toOllamaTools(tools),
   };
 
