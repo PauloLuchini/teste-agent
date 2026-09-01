@@ -33,7 +33,20 @@ async function handleMessageSend(params) {
   setStatus(task.id, "working");
 
   try {
-    const { text } = await runTesterAgent(userText);
+    const { text } = await runTesterAgent(userText, {
+      onEvent: (event) => {
+        if (event.type === "tool_call") {
+          console.log(`[a2a][task ${task.id}] tool_call: ${event.tool}`, JSON.stringify(event.input));
+        } else if (event.type === "tool_result") {
+          const preview = String(event.result).slice(0, 300).replace(/\n/g, "\\n");
+          console.log(
+            `[a2a][task ${task.id}] tool_result: ${event.tool} (${event.isError ? "erro" : "ok"}) -> ${preview}`
+          );
+        } else if (event.type === "model_turn") {
+          console.log(`[a2a][task ${task.id}] model_turn`);
+        }
+      },
+    });
     const reply = agentMessage(task.id, task.contextId, text || "(sem resposta em texto)");
     task.history.push(reply);
     task.artifacts.push({
