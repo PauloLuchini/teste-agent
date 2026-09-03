@@ -42,6 +42,13 @@ app.get("/healthz", (req, res) => res.json({ ok: true, upstream: config.ollamaBa
 // reserializar o payload e para preservar respostas SSE (stream: true).
 app.use("/v1", requireProxyAuth, async (req, res) => {
   const target = `${config.ollamaBaseUrl}${req.originalUrl}`;
+  const startedAt = Date.now();
+  console.log(`[ollama-proxy] -> ${req.method} ${req.originalUrl}`);
+  res.on("finish", () => {
+    console.log(
+      `[ollama-proxy] <- ${res.statusCode} ${req.method} ${req.originalUrl} (${Date.now() - startedAt}ms)`
+    );
+  });
 
   const init = {
     method: req.method,
