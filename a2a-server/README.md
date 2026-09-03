@@ -131,6 +131,68 @@ Note que `OLLAMA_PROXY_TOKENS` é separado de `A2A_BEARER_TOKENS` de
 propósito: são audiências diferentes (quem chama o agente vs. quem consome o
 modelo), então revogar um não derruba o outro.
 
+### Registrando o modelo no watsonx Orchestrate
+
+Com o proxy e o túnel no ar, o modelo local vira um *custom provider* no
+Orchestrate. O `orchestrate models add` pede uma connection do tipo
+`key_value` com as credenciais — o token não vai inline no comando:
+
+```bash
+PROXY_TOKEN=$(grep OLLAMA_PROXY_TOKENS .env | cut -d '=' -f2)
+
+orchestrate connections add -a ollama-local
+
+orchestrate connections configure \
+  -a ollama-local --env draft -t team -k key_value
+
+orchestrate connections set-credentials \
+  -a ollama-local --env draft -e api_key="$PROXY_TOKEN"
+
+orchestrate models add \
+  -n openai/llama3.1 \
+  --display-name "Llama 3.1 local" \
+  --provider-config '{"customHost":"https://SUA-URL-DO-TUNEL/v1"}' \
+  -a ollama-local \
+  --type chat
+```
+
+`-t team` faz a credencial valer para todos os usuários (com `member`, cada
+pessoa teria que informar a sua). O `models add` **valida por padrão** —
+ele chama o endpoint na hora, então túnel e proxy precisam estar no ar
+(use `--skip-validation` para pular).
+
+Confirme com `orchestrate models list`: o modelo aparece marcado com `◆`,
+que a legenda do próprio comando define como "model from a custom provider".
+
+**Como saber se está mesmo funcionando:** rode com o terminal do
+`npm run proxy` à vista. Tráfego real do Orchestrate aparece assim:
+
+```
+[ollama-proxy] -> POST /v1/chat/completions
+[ollama-proxy] <- 200 POST /v1/chat/completions (14438ms)
+[ollama-proxy] -> POST /v1/chat/completions
+[ollama-proxy] <- 200 POST /v1/chat/completions (313ms)
+```
+
+A primeira chamada demora bem mais (carregamento do modelo na memória); as
+seguintes ficam na casa de centenas de ms com o modelo já quente. Se **nada**
+aparecer nesse log, o Orchestrate não chegou no seu servidor — o problema é
+a URL ou o túnel, não a credencial nem o modelo.
+
+### Dois caminhos independentes — não confunda as métricas
+
+O agente A2A e o modelo custom são registros separados, e exercitar um não
+exercita o outro:
+
+| O que | Caminho | Log que acende |
+|---|---|---|
+| Agente `tester` | Orchestrate → túnel do `41241` → a2a-server → Ollama | `npm start` |
+| Modelo `openai/llama3.1` | Orchestrate → túnel do `11435` → proxy → Ollama | `npm run proxy` |
+
+O `tester` fala com o Ollama por dentro, por conta própria: registrar o
+modelo no Orchestrate não muda nada para ele. O modelo custom só é usado por
+agentes **nativos** do Orchestrate configurados para rodar nele.
+
 ## Rodando em container (Podman ou Docker)
 
 O `Dockerfile` fica em `a2a-server/`, mas o **contexto de build é a raiz do
