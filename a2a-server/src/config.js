@@ -30,6 +30,15 @@ export const config = {
   // ser bem mais lentos que a API da Anthropic, então o padrão é generoso.
   ollamaTimeoutMs: Number(process.env.OLLAMA_TIMEOUT_MS ?? 180_000),
 
+  // Proxy autenticado na frente do Ollama (src/ollamaProxy.js). Existe para
+  // expor o modelo local a um serviço externo (ex.: watsonx Orchestrate) sem
+  // deixar a porta do Ollama, que não tem autenticação nenhuma, aberta.
+  ollamaProxyPort: Number(process.env.OLLAMA_PROXY_PORT ?? 11435),
+  ollamaProxyTokens: (process.env.OLLAMA_PROXY_TOKENS ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean),
+
   bearerTokens: (process.env.A2A_BEARER_TOKENS ?? "")
     .split(",")
     .map((t) => t.trim())

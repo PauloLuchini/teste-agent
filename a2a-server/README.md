@@ -88,6 +88,49 @@ endpoints A2A).
   `http://host.docker.internal:11434` (Docker Desktop) ou publique o
   Ollama na rede do container.
 
+## Expondo o modelo local a um serviço externo (proxy autenticado)
+
+Cenário diferente do agente A2A: aqui você quer que um serviço externo (ex.:
+o watsonx Orchestrate, registrando um *custom provider* em `orchestrate
+models add`) use o **modelo** local diretamente, não o agente.
+
+O Ollama expõe uma API compatível com OpenAI em `/v1` — confirmado com:
+
+```bash
+curl http://localhost:11434/v1/models
+# {"object":"list","data":[{"id":"llama3.1:latest",...}]}
+```
+
+**Nunca exponha a porta 11434 direto num túnel:** o Ollama não tem
+autenticação nenhuma, então qualquer pessoa com a URL usaria sua máquina e
+sua GPU à vontade — e as rotas nativas `/api/*` incluem operações
+destrutivas (apagar modelo, baixar modelo arbitrário).
+
+Use o proxy em `src/ollamaProxy.js`:
+
+```bash
+# no .env:
+# OLLAMA_PROXY_PORT=11435
+# OLLAMA_PROXY_TOKENS=$(openssl rand -hex 32)
+
+npm run proxy
+```
+
+Ele exige `Authorization: Bearer <token>` e encaminha **apenas** `/v1/*`
+para o Ollama; `/api/*` não passa (404). O túnel aponta para a porta do
+proxy, não para a do Ollama:
+
+```bash
+cloudflared tunnel --url http://localhost:11435
+```
+
+Aí a base URL a registrar no serviço externo é `https://SUA-URL-DO-TUNEL/v1`,
+com o token de `OLLAMA_PROXY_TOKENS` como API key.
+
+Note que `OLLAMA_PROXY_TOKENS` é separado de `A2A_BEARER_TOKENS` de
+propósito: são audiências diferentes (quem chama o agente vs. quem consome o
+modelo), então revogar um não derruba o outro.
+
 ## Rodando em container (Podman ou Docker)
 
 O `Dockerfile` fica em `a2a-server/`, mas o **contexto de build é a raiz do

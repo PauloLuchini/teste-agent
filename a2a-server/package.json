@@ -7,7 +7,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node --env-file=.env src/server.js",
-    "dev": "node --env-file=.env --watch src/server.js"
+    "dev": "node --env-file=.env --watch src/server.js",
+    "proxy": "node --env-file=.env src/ollamaProxy.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
